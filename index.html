@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kaliʻu Buyer Decision Tool</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fa;
+      --surface: #ffffff;
+      --navy: #0d2b45;
+      --navy2: #163f60;
+      --ocean: #1e6fa0;
+      --wave: #2a9fd6;
+      --green: #16735b;
+      --green-bg: #e6f5ef;
+      --red: #b63333;
+      --red-bg: #fdecec;
+      --amber: #a36112;
+      --amber-bg: #fff3df;
+      --border: #d6e0eb;
+      --text: #12283a;
+      --muted: #6f879b;
+      --soft: #edf3f8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    header {
+      background: linear-gradient(135deg, var(--navy), var(--navy2));
+      color: white;
+      padding: 22px 28px;
+      border-bottom: 4px solid var(--wave);
+    }
+    header h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; }
+    header p { margin: 7px 0 0; color: #b9d2e5; font-size: 14px; max-width: 960px; }
+    .wrap { max-width: 1440px; margin: 0 auto; padding: 22px; }
+    .grid { display: grid; grid-template-columns: 390px 1fr; gap: 18px; align-items: start; }
+    .panel, .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(13, 43, 69, 0.06);
+    }
+    .panel { padding: 20px; position: sticky; top: 16px; }
+    .panel h2, .card h2 { margin: 0 0 16px; font-size: 18px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--ocean);
+      margin: 22px 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .section-title:before, .section-title:after { content: ""; height: 1px; background: var(--border); flex: 1; }
+    .control { margin-bottom: 16px; }
+    .control-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; align-items: baseline; }
+    label { font-size: 13px; font-weight: 700; color: var(--text); }
+    .value { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-weight: 800; color: var(--ocean); white-space: nowrap; }
+    input[type="range"] { width: 100%; accent-color: var(--ocean); cursor: pointer; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+    .main { display: grid; gap: 18px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .kpi { padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+    .kpi .label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .kpi .num { margin-top: 8px; font-size: 23px; font-weight: 850; letter-spacing: -0.04em; }
+    .kpi .sub { margin-top: 4px; font-size: 12px; color: var(--muted); line-height: 1.35; }
+    .card { padding: 22px; }
+    .summary-card { border-top: 5px solid var(--ocean); }
+    .summary-card.strong { border-top-color: var(--green); }
+    .summary-card.borderline { border-top-color: var(--amber); }
+    .summary-card.weak { border-top-color: var(--red); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 999px; font-size: 13px; font-weight: 800; margin-bottom: 12px; }
+    .badge.strong { background: var(--green-bg); color: var(--green); }
+    .badge.borderline { background: var(--amber-bg); color: var(--amber); }
+    .badge.weak { background: var(--red-bg); color: var(--red); }
+    .analysis { font-size: 15px; line-height: 1.65; color: #24384a; }
+    .analysis strong { color: var(--navy); }
+    .analysis ul { margin: 8px 0 0 18px; padding: 0; }
+    .analysis li { margin: 4px 0; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .mini-table th, .mini-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: right; }
+    .mini-table th:first-child, .mini-table td:first-child { text-align: left; }
+    .mini-table th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .callout { padding: 14px 16px; border-radius: 14px; font-size: 14px; line-height: 1.55; margin-top: 14px; }
+    .callout.info { background: var(--soft); border: 1px solid var(--border); }
+    .callout.warn { background: var(--amber-bg); border: 1px solid #e6c487; color: #65400b; }
+    .callout.bad { background: var(--red-bg); border: 1px solid #efb1b1; color: #742020; }
+    .callout.good { background: var(--green-bg); border: 1px solid #a9dcca; color: #104f3e; }
+    canvas { max-height: 360px; }
+    .footer-note { font-size: 11px; color: var(--muted); line-height: 1.5; padding: 4px 2px 16px; }
+    @media (max-width: 1050px) {
+      .grid { grid-template-columns: 1fr; }
+      .panel { position: relative; top: auto; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .two-col { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body { background: white; }
+      header, .panel { display: none; }
+      .wrap { padding: 0; }
+      .grid { display: block; }
+      .card, .kpi { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Kaliʻu Buyer Decision Tool</h1>
+    <p>Interactive pre-construction model comparing buyer deposit lock-up, mortgage affordability, wait-time cost, expected property gain, and alternative investment returns.</p>
+  </header>
+
+  <div class="wrap">
+    <div class="grid">
+      <aside class="panel">
+        <h2>Scenario Inputs</h2>
+
+        <div class="section-title">Purchase</div>
+        <div class="control"><div class="control-head"><label>Unit Price</label><span class="value" id="vPrice"></span></div><input id="price" type="range" min="700000" max="2500000" step="25000" value="1200000"><div class="hint">Use a representative unit price or specific floorplan.</div></div>
+        <div class="control"><div class="control-head"><label>Deposit / Down Payment</label><span class="value" id="vDepositPct"></span></div><input id="depositPct" type="range" min="5" max="35" step="1" value="20"><div class="hint">This models capital tied up before completion.</div></div>
+        <div class="control"><div class="control-head"><label>Price Incentive / Discount</label><span class="value" id="vIncentive"></span></div><input id="incentive" type="range" min="0" max="300000" step="10000" value="0"><div class="hint">Use this to test what concession makes the math compelling.</div></div>
+
+        <div class="section-title">Timeline</div>
+        <div class="control"><div class="control-head"><label>Time From Contract to Completion</label><span class="value" id="vWaitMonths"></span></div><input id="waitMonths" type="range" min="12" max="72" step="1" value="45"><div class="hint">Example: Dec 2025 to Sept 2029 ≈ 45 months.</div></div>
+        <div class="control"><div class="control-head"><label>Alternative Housing Cost / Month</label><span class="value" id="vRent"></span></div><input id="rent" type="range" min="0" max="9000" step="100" value="4500"><div class="hint">Rent, current mortgage burden, or housing cost while waiting.</div></div>
+
+        <div class="section-title">Rates & Returns</div>
+        <div class="control"><div class="control-head"><label>Mortgage Rate at Closing</label><span class="value" id="vRate"></span></div><input id="rate" type="range" min="4.5" max="8.5" step="0.125" value="6.75"><div class="hint">Use current expectation or stress-test higher/lower rates.</div></div>
+        <div class="control"><div class="control-head"><label>Alternative Investment Return</label><span class="value" id="vMarketReturn"></span></div><input id="marketReturn" type="range" min="0" max="14" step="0.5" value="7.5"><div class="hint">Return buyer could earn if the deposit remained invested.</div></div>
+        <div class="control"><div class="control-head"><label>Expected Home Appreciation</label><span class="value" id="vAppreciation"></span></div><input id="appreciation" type="range" min="-3" max="8" step="0.5" value="3.5"><div class="hint">Use conservative values when presenting internally.</div></div>
+
+        <div class="section-title">Ownership Cost</div>
+        <div class="control"><div class="control-head"><label>HOA / Maintenance / Month</label><span class="value" id="vHoa"></span></div><input id="hoa" type="range" min="500" max="3000" step="50" value="1200"></div>
+        <div class="control"><div class="control-head"><label>Tax + Insurance / Month</label><span class="value" id="vTaxIns"></span></div><input id="taxIns" type="range" min="300" max="3000" step="50" value="1000"></div>
+        <div class="control"><div class="control-head"><label>Holding Period After Completion</label><span class="value" id="vHoldYears"></span></div><input id="holdYears" type="range" min="1" max="10" step="1" value="5"><div class="hint">Used for buy vs invest comparison after completion.</div></div>
+      </aside>
+
+      <main class="main">
+        <section class="kpis">
+          <div class="kpi"><div class="label">Adjusted Price</div><div class="num" id="kPrice"></div><div class="sub">After incentive / discount</div></div>
+          <div class="kpi"><div class="label">Capital Locked</div><div class="num" id="kDeposit"></div><div class="sub">Deposit/down payment</div></div>
+          <div class="kpi"><div class="label">Total Wait Cost</div><div class="num" id="kWaitCost"></div><div class="sub">Lost return + housing during wait</div></div>
+          <div class="kpi"><div class="label">Deal Strength</div><div class="num" id="kScore"></div><div class="sub" id="kScoreSub"></div></div>
+        </section>
+
+        <section class="card summary-card" id="summaryCard">
+          <div class="badge" id="dealBadge"></div>
+          <h2>Real Buyer Impact Summary</h2>
+          <div class="analysis" id="writtenSummary"></div>
+        </section>
+
+        <section class="two-col">
+          <div class="card">
+            <h2>Wait Cost vs Expected Gain</h2>
+            <canvas id="waitChart"></canvas>
+            <div class="callout info" id="chartCallout"></div>
+          </div>
+          <div class="card">
+            <h2>What Would Make This Compelling?</h2>
+            <table class="mini-table">
+              <tbody id="fixTable"></tbody>
+            </table>
+            <div class="callout warn" id="fixCallout"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Buy vs Keep Deposit Invested</h2>
+          <canvas id="compareChart"></canvas>
+        </section>
+
+        <section class="card">
+          <h2>Buyer Objection Summary</h2>
+          <div id="objections"></div>
+        </section>
+
+        <div class="footer-note">
+          This model is for internal strategy discussion only. It simplifies mortgage qualification, taxes, closing costs, rent escalation, HOA escalation, capital gains, and actual contract deposit timing. Use it to frame buyer psychology and sales friction, not as financial advice.
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script>
+  const fmtMoney = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(isFinite(n) ? n : 0);
+  const fmtK = (n) => {
+    if (!isFinite(n)) return '$0';
+    const abs = Math.abs(n);
+    if (abs >= 1000000) return '$' + (n/1000000).toFixed(2) + 'M';
+    if (abs >= 1000) return '$' + Math.round(n/1000) + 'K';
+    return fmtMoney(n);
+  };
+  const fmtPct = (n) => (isFinite(n) ? n.toFixed(1) : '0.0') + '%';
+
+  const ids = ['price','depositPct','incentive','waitMonths','rent','rate','marketReturn','appreciation','hoa','taxIns','holdYears'];
+  const get = id => Number(document.getElementById(id).value);
+
+  let waitChart, compareChart;
+
+  function mortgagePayment(principal, annualRate, years = 30) {
+    if (principal <= 0) return 0;
+    const r = annualRate / 100 / 12;
+    const n = years * 12;
+    if (r === 0) return principal / n;
+    return principal * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  }
+
+  function calc() {
+    const price = get('price');
+    const depositPct = get('depositPct') / 100;
+    const incentive = get('incentive');
+    const waitMonths = get('waitMonths');
+    const waitYears = waitMonths / 12;
+    const rent = get('rent');
+    const rate = get('rate');
+    const marketReturn = get('marketReturn') / 100;
+    const appreciation = get('appreciation') / 100;
+    const hoa = get('hoa');
+    const taxIns = get('taxIns');
+    const holdYears = get('holdYears');
+
+    const adjustedPrice = Math.max(price - incentive, 0);
+    const deposit = adjustedPrice * depositPct;
+    const loan = adjustedPrice - deposit;
+    const payment = mortgagePayment(loan, rate, 30);
+    const monthlyCarry = payment + hoa + taxIns;
+
+    const depositFutureAtCompletion = deposit * Math.pow(1 + marketReturn, waitYears);
+    const depositOpportunityCost = depositFutureAtCompletion - deposit;
+    const housingDuringWait = rent * waitMonths;
+    const waitCost = depositOpportunityCost + housingDuringWait;
+
+    const valueAtCompletion = adjustedPrice * Math.pow(1 + appreciation, waitYears);
+    const expectedGainAtCompletion = valueAtCompletion - adjustedPrice;
+    const netPreCompletionPosition = expectedGainAtCompletion - waitCost;
+
+    const valueAfterHold = valueAtCompletion * Math.pow(1 + appreciation, holdYears);
+    const homeGainTotal = valueAfterHold - adjustedPrice;
+    const investedDepositAfterHold = deposit * Math.pow(1 + marketReturn, waitYears + holdYears);
+    const investedGainTotal = investedDepositAfterHold - deposit;
+
+    const breakEvenIncentive = Math.max(waitCost - expectedGainAtCompletion, 0);
+    const breakEvenAppreciation = waitYears > 0 ? (Math.pow((adjustedPrice + waitCost) / adjustedPrice, 1 / waitYears) - 1) * 100 : 0;
+    const breakEvenMarketRateEquivalent = deposit > 0 && waitYears > 0 ? (Math.pow((deposit + expectedGainAtCompletion - housingDuringWait) / deposit, 1 / waitYears) - 1) * 100 : 0;
+
+    let strength = 'borderline';
+    let strengthLabel = 'Borderline';
+    let score = 50;
+    if (netPreCompletionPosition > 100000) { strength = 'strong'; strengthLabel = 'Strong'; score = 82; }
+    else if (netPreCompletionPosition < -50000) { strength = 'weak'; strengthLabel = 'Weak'; score = 28; }
+    else { strength = 'borderline'; strengthLabel = 'Borderline'; score = 55; }
+
+    return {
+      price, depositPct, incentive, waitMonths, waitYears, rent, rate, marketReturn, appreciation, hoa, taxIns, holdYears,
+      adjustedPrice, deposit, loan, payment, monthlyCarry, depositFutureAtCompletion, depositOpportunityCost,
+      housingDuringWait, waitCost, valueAtCompletion, expectedGainAtCompletion, netPreCompletionPosition,
+      valueAfterHold, homeGainTotal, investedDepositAfterHold, investedGainTotal, breakEvenIncentive,
+      breakEvenAppreciation, breakEvenMarketRateEquivalent, strength, strengthLabel, score
+    };
+  }
+
+  function setText(id, text) { document.getElementById(id).textContent = text; }
+  function setHTML(id, html) { document.getElementById(id).innerHTML = html; }
+
+  function render() {
+    const d = calc();
+
+    setText('vPrice', fmtMoney(d.price));
+    setText('vDepositPct', fmtPct(d.depositPct * 100) + ' · ' + fmtK(d.deposit));
+    setText('vIncentive', fmtMoney(d.incentive));
+    setText('vWaitMonths', d.waitMonths + ' months · ' + d.waitYears.toFixed(2) + ' yrs');
+    setText('vRent', fmtMoney(d.rent));
+    setText('vRate', fmtPct(d.rate));
+    setText('vMarketReturn', fmtPct(d.marketReturn * 100));
+    setText('vAppreciation', fmtPct(d.appreciation * 100));
+    setText('vHoa', fmtMoney(d.hoa));
+    setText('vTaxIns', fmtMoney(d.taxIns));
+    setText('vHoldYears', d.holdYears + ' yrs');
+
+    setText('kPrice', fmtK(d.adjustedPrice));
+    setText('kDeposit', fmtK(d.deposit));
+    setText('kWaitCost', fmtK(d.waitCost));
+    setText('kScore', d.strengthLabel);
+    setText('kScoreSub', 'Pre-completion score: ' + d.score + '/100');
+
+    const badge = document.getElementById('dealBadge');
+    const card = document.getElementById('summaryCard');
+    badge.className = 'badge ' + d.strength;
+    card.className = 'card summary-card ' + d.strength;
+    badge.textContent = d.strength === 'strong' ? '🟢 Strong: upside outweighs wait cost' : d.strength === 'borderline' ? '🟡 Borderline: buyer needs stronger reason to commit' : '🔴 Weak: financial friction likely slows conversion';
+
+    const summary = `
+      <p><strong>Buyer Scenario Analysis</strong></p>
+      <p>This scenario assumes a buyer commits to a <strong>${fmtMoney(d.price)}</strong> unit, receives <strong>${fmtMoney(d.incentive)}</strong> in price incentive/discount, and waits approximately <strong>${d.waitMonths} months (${d.waitYears.toFixed(2)} years)</strong> from contract to completion.</p>
+      <p>During that wait period, the buyer's estimated deposit/down payment of <strong>${fmtMoney(d.deposit)}</strong> is tied up. If that capital could otherwise earn <strong>${fmtPct(d.marketReturn * 100)}</strong> annually, the lost investment gain is approximately <strong>${fmtMoney(d.depositOpportunityCost)}</strong>. If the buyer also carries alternative housing at <strong>${fmtMoney(d.rent)}/month</strong>, that adds approximately <strong>${fmtMoney(d.housingDuringWait)}</strong>.</p>
+      <p><strong>Total estimated economic drag before move-in: ${fmtMoney(d.waitCost)}.</strong></p>
+      <p>Against that, the property is projected to gain approximately <strong>${fmtMoney(d.expectedGainAtCompletion)}</strong> by completion based on <strong>${fmtPct(d.appreciation * 100)}</strong> annual appreciation. The pre-completion net position is therefore approximately <strong>${fmtMoney(d.netPreCompletionPosition)}</strong>.</p>
+      <p><strong>Interpretation:</strong> ${interpretationText(d)}</p>
+      <ul>
+        <li>Monthly ownership carry at closing is estimated around <strong>${fmtMoney(d.monthlyCarry)}</strong>.</li>
+        <li>The buyer is not just buying a home; they are making a <strong>multi-year capital commitment before they receive utility</strong>.</li>
+        <li>Conversion will depend on whether price, incentives, timeline confidence, and emotional/lifestyle value are strong enough to offset the wait.</li>
+      </ul>
+    `;
+    setHTML('writtenSummary', summary);
+
+    setHTML('fixTable', `
+      <tr><td>Incentive needed to offset wait-cost gap</td><td><strong>${fmtMoney(d.breakEvenIncentive)}</strong></td></tr>
+      <tr><td>Required appreciation to break even by completion</td><td><strong>${isFinite(d.breakEvenAppreciation) ? fmtPct(d.breakEvenAppreciation) : 'N/A'}</strong></td></tr>
+      <tr><td>Monthly ownership carry at closing</td><td><strong>${fmtMoney(d.monthlyCarry)}</strong></td></tr>
+      <tr><td>Deposit if invested through hold period</td><td><strong>${fmtMoney(d.investedDepositAfterHold)}</strong></td></tr>
+      <tr><td>Projected property value after hold period</td><td><strong>${fmtMoney(d.valueAfterHold)}</strong></td></tr>
+    `);
+
+    const fixCallout = d.breakEvenIncentive > 0
+      ? `At these assumptions, the model suggests the buyer needs roughly <strong>${fmtMoney(d.breakEvenIncentive)}</strong> of additional value through price reduction, rate buydown, closing credit, deposit flexibility, or stronger perceived upside to make the waiting cost feel justified.`
+      : `At these assumptions, the projected appreciation already offsets the wait-cost drag. The sales issue may be less about pure math and more about trust, product perception, or buyer targeting.`;
+    setHTML('fixCallout', fixCallout);
+
+    const chartCallout = d.netPreCompletionPosition >= 0
+      ? `The projected property gain by completion exceeds the estimated waiting cost by <strong>${fmtMoney(d.netPreCompletionPosition)}</strong>. This is the cleanest scenario for sales messaging.`
+      : `The estimated waiting cost exceeds projected gain by <strong>${fmtMoney(Math.abs(d.netPreCompletionPosition))}</strong>. This supports the argument that buyers may see the deal as financially unattractive unless incentives or perceived value improve.`;
+    setHTML('chartCallout', chartCallout);
+
+    renderObjections(d);
+    updateCharts(d);
+  }
+
+  function interpretationText(d) {
+    if (d.strength === 'strong') {
+      return `The financial math is comparatively healthy. The projected gain by completion appears to offset the wait cost, so marketing should emphasize scarcity, construction certainty, and the lifestyle/investment upside.`;
+    }
+    if (d.strength === 'borderline') {
+      return `The deal is not obviously bad, but it is not self-evidently compelling either. A buyer may still move forward if they strongly value the location, lifestyle, floorplan, brand, or long-term appreciation story. Without that emotional or strategic reason, they may wait.`;
+    }
+    return `The financial friction is high. The buyer's wait cost appears to exceed the projected gain before completion, which supports the concern that slow sales may be driven by product/price/value perception, not just mortgage rates.`;
+  }
+
+  function renderObjections(d) {
+    const rows = [
+      {title: 'Capital lock-up', text: `Buyer ties up ${fmtMoney(d.deposit)} for ${d.waitMonths} months before receiving the unit. That is a major psychological and financial hurdle.`},
+      {title: 'Opportunity cost', text: `At ${fmtPct(d.marketReturn * 100)}, the deposit could generate about ${fmtMoney(d.depositOpportunityCost)} before completion.`},
+      {title: 'Alternative housing burden', text: `If the buyer pays ${fmtMoney(d.rent)}/month while waiting, that equals ${fmtMoney(d.housingDuringWait)} before move-in.`},
+      {title: 'Affordability shock at closing', text: `Estimated monthly ownership carry is ${fmtMoney(d.monthlyCarry)} at a ${fmtPct(d.rate)} mortgage rate.`},
+      {title: 'Value uncertainty', text: `Projected gain by completion is ${fmtMoney(d.expectedGainAtCompletion)}. If buyers do not believe that appreciation story, the purchase feels weaker.`},
+      {title: 'Incentive requirement', text: d.breakEvenIncentive > 0 ? `The model suggests roughly ${fmtMoney(d.breakEvenIncentive)} of extra value is needed to offset the wait-cost gap.` : `At these assumptions, a major financial incentive is not required, but trust and positioning still matter.`}
+    ];
+
+    setHTML('objections', rows.map(r => `
+      <div class="callout info">
+        <strong>${r.title}:</strong> ${r.text}
+      </div>
+    `).join(''));
+  }
+
+  function updateCharts(d) {
+    const waitData = {
+      labels: ['Deposit lost return', 'Housing during wait', 'Expected gain by completion', 'Net position'],
+      datasets: [{
+        label: 'Amount',
+        data: [d.depositOpportunityCost, d.housingDuringWait, d.expectedGainAtCompletion, d.netPreCompletionPosition],
+        backgroundColor: ['#a36112', '#b63333', '#16735b', d.netPreCompletionPosition >= 0 ? '#16735b' : '#b63333'],
+        borderRadius: 10
+      }]
+    };
+
+    const commonOptions = {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => fmtMoney(ctx.parsed.y) } }
+      },
+      scales: {
+        y: { ticks: { callback: v => fmtK(v) }, grid: { color: '#e5edf4' } },
+        x: { grid: { display: false } }
+      }
+    };
+
+    if (!waitChart) {
+      waitChart = new Chart(document.getElementById('waitChart'), { type: 'bar', data: waitData, options: commonOptions });
+    } else {
+      waitChart.data = waitData;
+      waitChart.update();
+    }
+
+    const years = [];
+    const homeValues = [];
+    const investedDeposit = [];
+    for (let y = 0; y <= d.holdYears; y++) {
+      years.push('Yr ' + y);
+      homeValues.push(d.valueAtCompletion * Math.pow(1 + d.appreciation, y));
+      investedDeposit.push(d.deposit * Math.pow(1 + d.marketReturn, d.waitYears + y));
+    }
+
+    const compareData = {
+      labels: years,
+      datasets: [
+        { label: 'Projected property value', data: homeValues, borderColor: '#1e6fa0', backgroundColor: 'rgba(30,111,160,0.10)', fill: true, tension: .25 },
+        { label: 'Deposit if invested instead', data: investedDeposit, borderColor: '#163f60', backgroundColor: 'rgba(22,63,96,0.08)', fill: true, tension: .25 }
+      ]
+    };
+    const compareOptions = {
+      responsive: true,
+      plugins: { tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmtMoney(ctx.parsed.y) } } },
+      scales: {
+        y: { ticks: { callback: v => fmtK(v) }, grid: { color: '#e5edf4' } },
+        x: { grid: { display: false } }
+      }
+    };
+    if (!compareChart) {
+      compareChart = new Chart(document.getElementById('compareChart'), { type: 'line', data: compareData, options: compareOptions });
+    } else {
+      compareChart.data = compareData;
+      compareChart.update();
+    }
+  }
+
+  ids.forEach(id => document.getElementById(id).addEventListener('input', render));
+  render();
+</script>
+</body>
+</html>
